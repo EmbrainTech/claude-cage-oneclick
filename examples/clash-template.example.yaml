@@ -1,0 +1,18 @@
+# Claude Cage 代理节点导入模板（示例文件，请替换为自己的真实远端节点后使用 proxy-check / proxy-onboard）
+# 注意：切勿填写 127.0.0.1 / localhost 本地客户端端口，Cage 内置 Mihomo 核心需要直接连接远端代理节点。
+
+proxies:
+  - name: "transit-relay-example"
+    type: trojan
+    server: relay.example.com
+    port: 443
+    password: "REPLACE_WITH_YOUR_PASSWORD"
+    sni: relay.example.com
+
+  - name: "exit-node-example"
+    type: socks5
+    server: exit.example.com
+    port: 1080
+    username: "REPLACE_WITH_YOUR_USERNAME"
+    password: "REPLACE_WITH_YOUR_PASSWORD"
+    dialer-proxy: "transit-relay-example"

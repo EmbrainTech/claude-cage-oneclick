@@ -1,0 +1,12 @@
+node_modules/
+_output/
+.cage-download-*/
+*.exe
+*.zip
+*.log
+LOCAL_CREDENTIALS.txt
+*.local.yaml
+*.local.yml
+*.local.json
+.DS_Store
+Thumbs.db

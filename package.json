@@ -1,0 +1,27 @@
+{
+  "name": "claude-cage-oneclick",
+  "version": "1.0.0",
+  "description": "Claude Cage Windows 一键部署、校验、代理迁移预检与自动化运维工具集",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "cage-oneclick": "./bin/cage-oneclick.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "preflight": "node ./bin/cage-oneclick.mjs preflight",
+    "doctor": "node ./bin/cage-oneclick.mjs doctor",
+    "plan": "node ./bin/cage-oneclick.mjs plan --platform win32-amd64"
+  },
+  "keywords": [
+    "claude-cage",
+    "claude-code",
+    "windows",
+    "whpx",
+    "deployment",
+    "mihomo"
+  ]
+}
