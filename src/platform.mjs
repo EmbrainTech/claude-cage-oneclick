@@ -25,7 +25,8 @@ export function parseWindowsBuild(releaseStr) {
  * 当本地存在固定盘 D: 且可用空间充足（>= 20 GiB）时，优先落在 D:\Cage 与 D:\Cage\CageData，避免挤占 C 盘。
  */
 export function selectInstallLayout(drives = [], env = process.env, explicitInstallDir = '', explicitDataDir = '') {
-  const localAppData = env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const winPath = path.win32;
+  const localAppData = env.LOCALAPPDATA || winPath.join(os.homedir(), 'AppData', 'Local');
   const userProfile = env.USERPROFILE || os.homedir();
   const normalizedDrives = drives
     .map((d) => ({
@@ -37,7 +38,7 @@ export function selectInstallLayout(drives = [], env = process.env, explicitInst
   const dDrive = normalizedDrives.find((d) => d.letter === 'D');
   const cDrive = normalizedDrives.find((d) => d.letter === 'C');
 
-  let installDir = explicitInstallDir ? path.resolve(explicitInstallDir) : '';
+  let installDir = explicitInstallDir ? winPath.resolve(explicitInstallDir) : '';
   let reason = 'user_specified';
 
   if (!installDir) {
@@ -45,20 +46,20 @@ export function selectInstallLayout(drives = [], env = process.env, explicitInst
       installDir = 'D:\\Cage';
       reason = 'prefer_fixed_d_drive';
     } else {
-      installDir = path.join(localAppData, 'Programs', 'Cage');
+      installDir = winPath.join(localAppData, 'Programs', 'Cage');
       reason = 'default_localappdata';
     }
   }
 
-  let dataDir = explicitDataDir ? path.resolve(explicitDataDir) : '';
+  let dataDir = explicitDataDir ? winPath.resolve(explicitDataDir) : '';
   if (!dataDir) {
     // 遵循 Cage Windows 安装约定：若安装目录在独立数据盘或显式目录，默认使用 <installDir>\CageData。
     if (installDir.toUpperCase().startsWith('D:\\')) {
-      dataDir = path.join(installDir, 'CageData');
+      dataDir = winPath.join(installDir, 'CageData');
     } else if (dDrive && dDrive.freeBytes >= RECOMMENDED_DATA_GIB * GIB) {
       dataDir = 'D:\\CageData';
     } else {
-      dataDir = path.join(userProfile, '.claude-cage', 'state');
+      dataDir = winPath.join(userProfile, '.claude-cage', 'state');
     }
   }
 
@@ -70,9 +71,9 @@ export function selectInstallLayout(drives = [], env = process.env, explicitInst
   return {
     installDir,
     dataDir,
-    profileDir: path.join(userProfile, '.claude-cage'),
-    cliPath: path.join(installDir, 'resources', 'cage.exe'),
-    launcherPath: path.join(installDir, 'Cage.exe'),
+    profileDir: winPath.join(userProfile, '.claude-cage'),
+    cliPath: winPath.join(installDir, 'resources', 'cage.exe'),
+    launcherPath: winPath.join(installDir, 'Cage.exe'),
     reason,
     installDriveFreeGiB: targetDrive ? Number((targetDrive.freeBytes / GIB).toFixed(2)) : null,
     dataDriveFreeGiB: dataDrive ? Number((dataDrive.freeBytes / GIB).toFixed(2)) : null,
