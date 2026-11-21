@@ -92,6 +92,37 @@ test('runSetup 自动完成账户创建、凭据落盘、存储绑定与设置�
   }
 });
 
+test('runInstall 覆盖升级已有安装前调用 stopUpgradeProcesses 清理占用', async () => {
+  let stopped = false;
+  let installed = false;
+  const res = await runInstall(
+    { version: 'v0.2.0-rc' },
+    {
+      inspectHost: async () => ({
+        ready: true,
+        checks: [],
+        layout: { installDir: 'D:\\Cage', dataDir: 'D:\\Cage\\CageData' },
+        existing_install: { installLocation: 'D:\\Cage', displayVersion: '0.1.8' },
+      }),
+      makePlan: async () => ({
+        release: 'v0.2.0-rc',
+        asset: 'Cage-0.2.0-rc-windows-amd64-setup.exe',
+        size: 100,
+        sha256: 'd'.repeat(64),
+      }),
+      downloadAsset: async (plan) => ({ ...plan, path: 'D:\\_installers\\claude-cage\\Cage-0.2.0-rc-windows-amd64-setup.exe' }),
+      verifySignature: async () => ({ trusted: true, status: 'Valid', reason: 'ok' }),
+      stopUpgradeProcesses: async () => { stopped = true; },
+      runInstaller: async () => {
+        assert.equal(stopped, true);
+        installed = true;
+      },
+    }
+  );
+  assert.equal(installed, true);
+  assert.equal(res.status, 'installed');
+});
+
 test('parseCliArgs 正确解析命令行参数与标志', () => {
   const parsed = parseCliArgs(['deploy', '--version', 'v0.1.8', '--install-dir', 'D:\\Cage', '--dry-run', '--json']);
   assert.equal(parsed.command, 'deploy');

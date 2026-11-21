@@ -57,6 +57,30 @@ export function buildSilentInstallerArgs({ installDir, desktopShortcut = true, s
   return args;
 }
 
+async function ensureUpgradeProcessesStopped(installDir, existingCli) {
+  if (process.platform !== 'win32' || !installDir || !existsSync(installDir)) return;
+  if (existsSync(existingCli)) {
+    const client = new CageClient(existingCli);
+    const status = await client.call('status').catch(() => null);
+    if (status?.data?.vm_running) {
+      throw new Error('检测到虚拟机仍在运行，请先保存工作并执行 environment.stop 后再升级安装。');
+    }
+    await client.call('proxy.stop', undefined, { wait: '30s' }).catch(() => {});
+  }
+  // NSIS 安装器会校验 Cage.exe / cage.exe / mihomo.exe 是否占用，升级前须仅清理同目录控制与代理核心进程。
+  const escapedDir = path.resolve(installDir).replace(/'/g, "''");
+  const script = `
+    $prefix = '${escapedDir}\\'
+    Get-Process -ErrorAction SilentlyContinue |
+      Where-Object { $_.Path -and $_.Path.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase) -and $_.ProcessName -in @('cage','mihomo','Cage') } |
+      Stop-Process -Force -ErrorAction SilentlyContinue
+  `;
+  await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    timeout: 15000,
+    windowsHide: true,
+  }).catch(() => {});
+}
+
 async function runSilentWindowsInstaller(installerPath, installDir) {
   const args = buildSilentInstallerArgs({ installDir });
   // 通过 PowerShell Start-Process 等待 NSIS 子进程及 WebView2 安装器完整退出。
@@ -128,6 +152,9 @@ export async function runInstall(options = {}, deps = {}) {
   }
 
   if (!options.dryRun) {
+    if (existing?.installLocation) {
+      await (deps.stopUpgradeProcesses || ensureUpgradeProcessesStopped)(targetDir, targetCli);
+    }
     await (deps.runInstaller || runSilentWindowsInstaller)(installerPath, targetDir);
   }
 
@@ -305,7 +332,11 @@ export async function runProxyOnboard({ yamlPath = '', subscriptionUrl = '', nam
   let guestStart = null;
   let selectedGuest = null;
   if (startGuest) {
-    const guestOpts = await client.call('guest.options');
+    let guestOpts = await client.call('guest.options');
+    if (guestOpts.data?.reselect && guestOpts.data?.pending?.id) {
+      await client.call('guest.reselect', { id: guestOpts.data.pending.id });
+      guestOpts = await client.call('guest.options');
+    }
     selectedGuest = selectGuestSystem(guestOpts.data, guestSystem);
     guestStart = await client.call('environment.start', { guest_system: selectedGuest }, { wait: '30m', timeoutMs: 1850000 });
   }

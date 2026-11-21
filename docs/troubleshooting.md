@@ -28,3 +28,16 @@ Linux 虚拟机初始虚拟磁盘上限为 24 GiB，外加镜像缓存可能占�
 `%USERPROFILE%\.claude-cage\LOCAL_CREDENTIALS.txt`
 
 请勿将该文件分享或提交到任何 Git 仓库。建议在首次打开 `Cage.exe` 登录后启用「记住我」。
+
+## 5. 首次创建虚拟机时 `apt-get update` 报 `Connection failed [IP: ... 80]`
+
+部分住宅 IP 代理节点（例如只放行 443 端口 HTTPS 的独享住宅节点）会屏蔽 **TCP 80 端口（明文 HTTP）**。而 Cage 首次初始化 Linux 客机时，引导脚本需要先通过 HTTP 80 端口请求软件源（如 `http://deb.debian.org/debian-security` 或 `http://archive.ubuntu.com`）。
+
+若遇到：
+- `settings.probe`（HTTPS 443）正常返回出口 IP
+- 但 `environment.start` 在安装软件包阶段报 `Connection failed [IP: ... 80]`
+
+排查与解决方式：
+1. 在本机临时用支持 80 端口的代理节点验证：`curl.exe -x http://127.0.0.1:7897 -I http://deb.debian.org/debian-security/dists/trixie-security/InRelease`，若返回 `502 Bad Gateway` 而 `https://...` 返回 `200 OK`，即可确认是当前出口节点屏蔽了 80 端口。
+2. 在 Cage 中临时切换到允许 80 端口的中转/机场节点完成一次 `environment.start`（首次装完基础包后日常运行 Claude Code 与浏览器均走 HTTPS 443），再切回原住宅 IP 节点即可；或在代理服务端放行出站 TCP 80 端口。
+
