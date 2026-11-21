@@ -102,6 +102,7 @@ export function extractYamlProxyNodes(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   let inSection = false;
   let sectionIndent = -1;
+  let itemIndent = -1;
   const nodes = [];
   let current = null;
   let nestedKey = null;
@@ -136,25 +137,33 @@ export function extractYamlProxyNodes(yamlText) {
     const trimmed = cleaned.trim();
 
     if (!inSection) {
-      if (/^(proxies|payload)\s*:\s*$/.test(trimmed)) {
+      if (indent === 0 && /^(proxies|payload)\s*:\s*$/.test(trimmed)) {
         inSection = true;
         sectionIndent = indent;
+        itemIndent = -1;
       }
       continue;
     }
 
-    if (indent <= sectionIndent && !trimmed.startsWith('-')) {
+    if (indent <= sectionIndent && !trimmed.startsWith('- ')) {
       if (current) nodes.push(current);
       current = null;
-      if (/^(proxies|payload)\s*:\s*$/.test(trimmed)) {
+      if (indent === 0 && /^(proxies|payload)\s*:\s*$/.test(trimmed)) {
         sectionIndent = indent;
+        itemIndent = -1;
         continue;
       }
       inSection = false;
+      itemIndent = -1;
       continue;
     }
 
     if (trimmed.startsWith('- ')) {
+      if (itemIndent === -1) itemIndent = indent;
+      if (indent !== itemIndent) {
+        // 属于当前节点内部的嵌套列表项（如 alpn / ports），不视为新节点。
+        continue;
+      }
       if (current) nodes.push(current);
       nestedKey = null;
       const body = trimmed.slice(2).trim();

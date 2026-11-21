@@ -74,3 +74,25 @@ test('validateProxyConfig 支持节点分享链接列表预检', () => {
   assert.equal(result.total, 2);
   assert.equal(JSON.stringify(result).includes('secret-token'), false);
 });
+
+test('validateProxyConfig 正确忽略节点内嵌数组（如 alpn）及后续 proxy-groups 段', () => {
+  const yaml = `
+proxies:
+- name: "zero-indent-node"
+  type: vless
+  server: example.com
+  port: 443
+  alpn:
+    - h2
+    - http/1.1
+proxy-groups:
+- name: GLOBAL
+  type: select
+  proxies:
+  - zero-indent-node
+`;
+  const result = validateProxyConfig(yaml);
+  assert.equal(result.valid, true);
+  assert.equal(result.total, 1);
+  assert.equal(result.usable, 1);
+});
